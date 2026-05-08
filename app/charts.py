@@ -4,7 +4,7 @@ import pandas as pd
 def create_globe_chart(df: pd.DataFrame):
     if df.empty:
         # Return an empty globe if no data
-        fig = px.scatter_geo(projection="orthographic")
+        fig = px.scatter_geo(projection="natural earth")
     else:
         # Define a custom color map for Awards
         color_discrete_map = {
@@ -31,8 +31,8 @@ def create_globe_chart(df: pd.DataFrame):
                 "Latitude": False,
                 "Longitude": False
             },
-            projection="orthographic",
-            title="Michelin Guide Restaurants on 3D Globe",
+            projection="natural earth",
+            title="Michelin Guide Restaurants on Map",
             color_discrete_map=color_discrete_map
         )
 
@@ -47,7 +47,7 @@ def create_globe_chart(df: pd.DataFrame):
             countrywidth=0.5,
             landcolor="rgb(243, 243, 243)",
             oceancolor="rgb(204, 229, 255)",
-            projection_type="orthographic"
+            projection_type="natural earth"
         ),
         legend=dict(
             orientation="h",
