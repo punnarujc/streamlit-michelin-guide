@@ -3,8 +3,10 @@ import pandas as pd
 
 def create_globe_chart(df: pd.DataFrame):
     if df.empty:
-        # Return an empty globe if no data
-        fig = px.scatter_geo(projection="natural earth")
+        # Return an empty map if no data
+        import plotly.graph_objects as go
+        fig = go.Figure(go.Scattermapbox())
+        fig.update_layout(mapbox_style="carto-positron")
     else:
         # Define a custom color map for Awards
         color_discrete_map = {
@@ -15,8 +17,8 @@ def create_globe_chart(df: pd.DataFrame):
             'Selected Restaurants': '#8E24AA' # Purple
         }
 
-        # Create interactive 3D globe
-        fig = px.scatter_geo(
+        # Create interactive map
+        fig = px.scatter_mapbox(
             df,
             lat="Latitude",
             lon="Longitude",
@@ -31,23 +33,19 @@ def create_globe_chart(df: pd.DataFrame):
                 "Latitude": False,
                 "Longitude": False
             },
-            projection="natural earth",
+            mapbox_style="carto-positron",
+            zoom=1,
             title="Michelin Guide Restaurants on Map",
             color_discrete_map=color_discrete_map
         )
 
-    # Styling the globe for better look
+    # Styling the map for better look
     fig.update_layout(
         height=800,
         margin={"r":0,"t":40,"l":0,"b":0},
-        geo=dict(
-            showland=True,
-            showcountries=True,
-            showocean=True,
-            countrywidth=0.5,
-            landcolor="rgb(243, 243, 243)",
-            oceancolor="rgb(204, 229, 255)",
-            projection_type="natural earth"
+        mapbox=dict(
+            style="carto-positron",
+            zoom=1.5
         ),
         legend=dict(
             orientation="h",
@@ -59,11 +57,10 @@ def create_globe_chart(df: pd.DataFrame):
         )
     )
 
-    # Increase marker size and add a subtle border to make them easier to see and click
+    # Increase marker size to make them easier to see and click
     fig.update_traces(
         marker=dict(
-            size=10,
-            line=dict(width=1, color='rgba(255, 255, 255, 0.5)')
+            size=10
         )
     )
 

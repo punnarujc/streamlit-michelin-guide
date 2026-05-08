@@ -28,7 +28,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Michelin Guide 2021 on a 3D Globe 🌍")
+st.title("Michelin Guide 2021 Map 🗺️")
 
 # Initialize and load data
 with st.spinner("Downloading and Loading Michelin Guide Dataset..."):
@@ -38,19 +38,16 @@ with st.spinner("Downloading and Loading Michelin Guide Dataset..."):
 all_awards = get_unique_awards()
 default_awards = [a for a in all_awards if 'Star' in a] # Default to showing starred restaurants
 
-# Sidebar for filters
-st.sidebar.header("Filters")
-selected_awards = st.sidebar.multiselect(
+# Filters in main area
+selected_awards = st.multiselect(
     "Filter by Award",
     options=all_awards,
     default=default_awards
 )
-
-st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
     ### About
-    This is an interactive 3D globe visualizing the **Michelin Guide Restaurants 2021** dataset from Kaggle.
+    This is an interactive 2D map visualizing the **Michelin Guide Restaurants 2021** dataset from Kaggle.
     Built with **Streamlit**, **DuckDB**, and **Plotly**.
     """
 )
@@ -61,7 +58,13 @@ df = get_restaurants(awards=selected_awards)
 # Render Chart
 st.subheader(f"Showing {len(df)} Restaurants")
 fig = create_globe_chart(df)
-event = st.plotly_chart(fig, width="stretch", on_select="rerun", selection_mode="points")
+event = st.plotly_chart(
+    fig,
+    width="stretch",
+    on_select="rerun",
+    selection_mode="points",
+    config={"scrollZoom": True, "displayModeBar": True}
+)
 
 # Show Details Table on Selection
 if event and event.selection.points:
