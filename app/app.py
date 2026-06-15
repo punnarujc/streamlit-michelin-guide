@@ -1,7 +1,6 @@
 import streamlit as st
-from data import load_kaggle_data, get_restaurants, get_unique_awards
-from charts import create_globe_chart
 
+# Set global page configuration
 st.set_page_config(
     page_title="Michelin Guide Globe",
     page_icon="🌍",
@@ -9,72 +8,159 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for styling (premium look)
-st.markdown("""
+# Define pages relative to this entrypoint script (app/app.py)
+map_page = st.Page("map.py", title="Michelin Guide Map", default=True)
+michelin_guide_page = st.Page("michelin_guide.py", title="Michelin Guide")
+#
+
+
+# Setup navigation structure
+pg = st.navigation([map_page, michelin_guide_page])
+# Inject premium custom CSS for the sidebar and header
+st.sidebar.markdown("""
 <style>
-    .main {
-        background-color: #0e1117;
-        color: #fafafa;
-    }
-    h1 {
-        color: #E53935;
-        font-family: 'Inter', sans-serif;
-        text-align: center;
-        padding: 20px;
-    }
-    .stSelectbox label, .stMultiSelect label {
-        color: #fafafa;
-    }
+header, [data-testid="stHeader"], .stAppHeader {
+    background-color: #050505 !important;
+    background: #050505 !important;
+    border-bottom: 1px solid #101010 !important;
+}
+header *, [data-testid="stHeader"] *, .stAppHeader * {
+    color: #ffffff !important;
+}
+header svg, [data-testid="stHeader"] svg, .stAppHeader svg {
+    fill: #ffffff !important;
+}
+
+/* Sidebar container background & border */
+[data-testid="stSidebar"] {
+    background-color: #0a0a0a !important;
+    border-right: 1px solid #1a1a1a !important;
+}
+
+/* Sidebar navigation container background override */
+[data-testid="stSidebarNav"] {
+    background-color: transparent !important;
+    padding-top: 10px !important;
+}
+
+/* Sidebar navigation links */
+[data-testid="stSidebarNav"] ul li a {
+    background-color: transparent !important;
+    color: #cccccc !important;
+    font-size: 12px !important;
+    font-weight: 100 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+    margin-bottom: 4px !important;
+}
+
+/* Hover state on navigation link */
+[data-testid="stSidebarNav"] ul li a:hover {
+    background-color: #161616 !important;
+    color: #D4AF37 !important;
+}
+
+/* Active navigation link */
+[data-testid="stSidebarNav"] ul li a[aria-current="page"] {
+    background-color: #BD1B21 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 12px rgba(189, 27, 33, 0.4) !important;
+}
+
+/* Sidebar markdown text styling */
+[data-testid="stSidebar"] .element-container p,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span {
+    color: #888888 !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+}
+
+/* Custom separator line */
+[data-testid="stSidebar"] hr {
+    border-color: #1a1a1a !important;
+    margin: 20px 0 !important;
+}
+
+/* About Section Title */
+.sidebar-section-title {
+    color: #ffffff !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    margin-top: 15px;
+    margin-bottom: 8px;
+}
+
+/* Luxury border button styling */
+.sidebar-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background-color: #000000 !important; /* black background */
+    color: #ff0000 !important;           /* red text */
+    border: 1px solid #ff0000 !important;/* red border */
+    border-radius: 6px !important;
+    padding: 8px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    margin-top: 15px;
+}
+.sidebar-btn:hover {
+    background-color: #000000 !important; /* black hover */
+    color: #ff0000 !important;           /* red text */
+    border-color: #ff0000 !important;
+    box-shadow: 0 0 10px rgba(255,0,0,0.3) !important; /* subtle red glow */
+}
+
+/* Sidebar bold white text for data updated */
+.sidebar-data-updated,
+.sidebar-data-updated * {
+    color: #ffffff !important;
+    font-weight: thin !important;
+}
+.sidebar-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    color: #fafafa !important;
+}
+
+/* Ensure all text inside the footer is white */
+.sidebar-footer p,
+.sidebar-footer span,
+.sidebar-footer div {
+    color: #ffffff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Michelin Guide 2021 Map 🗺️")
+# Run the navigation router
+pg.run()
 
-# Initialize and load data
-with st.spinner("Downloading and Loading Michelin Guide Dataset..."):
-    load_kaggle_data()
-
-# Fetch unique awards for the filter
-all_awards = get_unique_awards()
-default_awards = [a for a in all_awards if 'Star' in a] # Default to showing starred restaurants
-
-# Filters in main area
-selected_awards = st.multiselect(
-    "Filter by Award",
-    options=all_awards,
-    default=default_awards
-)
+# Additional sidebar components rendered after page load
+st.sidebar.markdown("<div class='sidebar-section-title'>About</div>", unsafe_allow_html=True)
 st.sidebar.markdown(
-    """
-    ### About
-    This is an interactive 2D map visualizing the **Michelin Guide Restaurants 2021** dataset from Kaggle.
-    Built with **Streamlit**, **DuckDB**, and **Plotly**.
-    """
+    "This is an interactive 2D map visualizing the **Michelin Guide Restaurants 2021** dataset from Kaggle. "
+    "Built with **Streamlit**, **DuckDB**, and **Plotly**."
 )
 
-# Get data
-df = get_restaurants(awards=selected_awards)
+st.sidebar.markdown("---")
 
-# Render Chart
-st.subheader(f"Showing {len(df)} Restaurants")
-fig = create_globe_chart(df)
-event = st.plotly_chart(
-    fig,
-    width="stretch",
-    on_select="rerun",
-    selection_mode="points",
-    config={"scrollZoom": True, "displayModeBar": True}
-)
-
-# Show Details Table on Selection
-if event and event.selection.points:
-    selected_urls = [point["customdata"][0] for point in event.selection.points]
-    selected_df = df[df["Url"].isin(selected_urls)]
-
-    st.markdown("### 🍽️ Selected Restaurant Details")
-    # Display the selected data nicely
-    st.dataframe(
-        selected_df[["Name", "Award", "Location", "Price", "Cuisine", "FacilitiesAndServices", "Url"]],
-        width="stretch",
-        hide_index=True
-    )
+st.sidebar.markdown("""
+<div class="sidebar-data-updated">
+    <div style="font-size: 11px; font-weight: 300; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;">Data Updated</div>
+    <div style="font-size: 11px; font-weight: 100;">June 2026</div>
+</div>
+""", unsafe_allow_html=True)
