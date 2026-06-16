@@ -9,5 +9,9 @@ dependencies = [
     "kagglehub>=1.0.1",
     "pandas>=3.0.2",
     "plotly>=6.7.0",
+    "pymongo>=4.17.0",
+    "pymysql>=1.2.0",
+    "python-dotenv>=1.2.2",
+    "snowflake-connector-python>=4.6.0",
     "streamlit>=1.57.0",
 ]

@@ -1,15 +1,11 @@
+import urllib.request
+import re
 import streamlit as st
-import pandas as pd
 import plotly.express as px
+import pandas as pd
+from app.data import load_data, get_restaurants, get_unique_awards
 
-from data import load_kaggle_data, get_restaurants
 # ===== LUXURY THEME ADDITION =====
-st.set_page_config(
-    page_title="Michelin Luxury Guide",
-    page_icon="⭐",
-    layout="wide"
-)
-
 st.markdown("""
 <style>
 .stApp{
@@ -48,14 +44,6 @@ header svg, [data-testid="stHeader"] svg, .stAppHeader svg {
 </style>
 """, unsafe_allow_html=True)
 # ===== END THEME =====
-
-
-import streamlit as st
-import plotly.express as px
-import pandas as pd
-import urllib.request
-import re
-from data import load_kaggle_data, get_restaurants, get_unique_awards
 
 
 if 'country_filter' not in st.session_state:
@@ -310,6 +298,7 @@ div.stButton > button:hover {
 [data-testid="stMetric"] div {
     justify-content: flex-start !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 import base64
@@ -318,32 +307,43 @@ import os
 st.markdown("""<div class="michelin-hero"><div class="michelin-hero-content"><div class="michelin-hero-meta">THE WORLD'S GREATEST RESTAURANTS <span style="color: #BD1B21;">• 2026 EDITION</span></div><div class="michelin-hero-brand"><h1 class="brand-michelin">MICHELIN</h1><h1 class="brand-guide">GUIDE</h1></div><div class="michelin-hero-stars"><span class="star-line"></span><span class="stars-gold">★ ★ ★</span><span class="star-line"></span></div><div class="michelin-hero-subtitle"><p class="sub-en">Excellence across 40+ countries</p><p class="sub-th">ความเป็นเลิศทางคุณค่าอาหารระดับโลก</p></div><div class="michelin-hero-pills"><div class="hero-pill pill-red">🇹🇭 THAILAND 2026 NEW</div><div class="hero-pill pill-outline">2 THREE-STAR RESTAURANTS</div><div class="hero-pill pill-outline">475 TOTAL SELECTIONS</div></div></div></div>""", unsafe_allow_html=True)
 
 # Load Data
-with st.spinner("Loading Michelin Guide Dataset..."):
-    load_kaggle_data()
-    # Fetch all data by passing all awards
-    all_awards = get_unique_awards()
-    df = get_restaurants(awards=all_awards)
+sf_passcode = st.session_state.get("snowflake_passcode")
+if not st.session_state.get("data_loaded", False):
+    with st.spinner("Loading Michelin Guide Dataset..."):
+        load_data(snowflake_passcode=sf_passcode)
+else:
+    load_data(snowflake_passcode=sf_passcode)
+
+# Fetch all data by passing all awards
+all_awards = get_unique_awards()
+df = get_restaurants(awards=all_awards)
 
 if df.empty:
     st.error("No data found or failed to load data.")
 else:
     # Data preprocessing
-    # Split Location into City and Country. Handle cases where there might not be a comma
-    location_split = df['Location'].str.split(', ', n=1, expand=True)
-    df['City'] = location_split[0]
-    df['Country'] = location_split[1].fillna('Unknown')
-    
-    # Extract District from Address
-    def get_district(row):
-        parts = [p.strip() for p in str(row['Address']).split(',')]
-        try:
-            idx = parts.index(row['City'])
-            return parts[idx-1] if idx > 0 else 'Unknown'
-        except ValueError:
-            return 'Unknown'
-            
-    df['District'] = df.apply(get_district, axis=1)
-    
+    # Use pre-populated City and Country columns if available; otherwise compute them on the fly
+    if 'City' not in df.columns or df['City'].isnull().all() or 'Country' not in df.columns or df['Country'].isnull().all():
+        location_split = df['Location'].str.split(', ', n=1, expand=True)
+        df['City'] = location_split[0]
+        df['Country'] = location_split[1].fillna('Unknown')
+    else:
+        df['City'] = df['City'].fillna('Unknown')
+        df['Country'] = df['Country'].fillna('Unknown')
+
+    # Use pre-populated District column if available; otherwise extract from Address
+    if 'District' not in df.columns or df['District'].isnull().all():
+        def get_district(row):
+            parts = [p.strip() for p in str(row['Address']).split(',')]
+            try:
+                idx = parts.index(row['City'])
+                return parts[idx-1] if idx > 0 else 'Unknown'
+            except ValueError:
+                return 'Unknown'
+        df['District'] = df.apply(get_district, axis=1)
+    else:
+        df['District'] = df['District'].fillna('Unknown')
+
     # Read selections from st.session_state (populated on page load or on rerun)
     selected_countries = st.session_state.get('country_filter', [])
     selected_cities = st.session_state.get('city_filter', [])
@@ -367,11 +367,12 @@ else:
     if selected_names:
         filtered_df = filtered_df[filtered_df['Name'].isin(selected_names)]
 
+
     # ------------------
     # Dynamic Metrics (Summary Panel)
     # ------------------
     st.markdown("<h2 class='section-title'> Summary</h2>", unsafe_allow_html=True)
-    
+
     num_restaurants = f"{len(filtered_df):,}"
     num_countries = f"{filtered_df['Country'].nunique():,}" if 'Country' in filtered_df.columns else "0"
     num_cities = f"{filtered_df['City'].nunique():,}" if 'City' in filtered_df.columns else "0"
@@ -520,32 +521,32 @@ else:
     st.markdown("<h2 class='section-title filter-data'> Filter Data</h2>", unsafe_allow_html=True)
 
     # Preset filter buttons removed (moved to interactive hero pills)
-    
+
     with st.container(border=True):
         row1_cols = st.columns(3)
         row2_cols = st.columns(3)
         countries = sorted(df['Country'].dropna().unique().tolist())
         selected_countries = row1_cols[0].multiselect("Country", options=countries, placeholder="Choose countries...", key='country_filter')
-            
+
         # Filter cities based on selected country
         if selected_countries:
             cities = sorted(df[df['Country'].isin(selected_countries)]['City'].dropna().unique().tolist())
         else:
             cities = sorted(df['City'].dropna().unique().tolist())
-        
+
         selected_cities = row1_cols[1].multiselect("City", options=cities, placeholder="Choose cities...", key='city_filter')
-        
+
         # Filter districts based on selected city/country
         temp_df = df.copy()
         if selected_countries: temp_df = temp_df[temp_df['Country'].isin(selected_countries)]
         if selected_cities: temp_df = temp_df[temp_df['City'].isin(selected_cities)]
         districts = sorted(temp_df[temp_df['District'] != 'Unknown']['District'].dropna().unique().tolist())
-        
+
         selected_districts = row1_cols[2].multiselect("District", options=districts, placeholder="Choose districts... (e.g. Sathon)", key='district_filter')
-            
+
         awards = sorted(df['Award'].dropna().unique().tolist())
         selected_awards = row2_cols[0].multiselect("Award", options=awards, placeholder="Choose awards...", key='award_filter')
-            
+
         price_levels = sorted(df['Price'].dropna().unique().tolist())
         selected_prices = row2_cols[1].multiselect("Price", options=price_levels, placeholder="Choose price levels...", key='price_filter')
 
@@ -555,7 +556,7 @@ else:
         if selected_awards: temp_df2 = temp_df2[temp_df2['Award'].isin(selected_awards)]
         if selected_prices: temp_df2 = temp_df2[temp_df2['Price'].isin(selected_prices)]
         names = sorted(temp_df2['Name'].dropna().unique().tolist())
-        
+
         selected_names = row2_cols[2].multiselect("Name", options=names, placeholder="Search restaurant name...", key='name_filter')
 
         # Clear filters button
@@ -565,15 +566,15 @@ else:
     # Display Map
     # ------------------
     st.markdown("---")
-    
+
     col_map_title, col_map_btn = st.columns([8, 2])
     with col_map_title:
         st.markdown("<h2 class='section-title'> Michelin Restaurants Map</h2>", unsafe_allow_html=True)
     with col_map_btn:
-        # A simple button that triggers a rerun, which reapplies the mapbox bounds 
+        # A simple button that triggers a rerun, which reapplies the mapbox bounds
         # to effectively reset the zoom/pan back to auto-fit the data.
         st.button("Reset Map View (Auto-Fit)")
-        
+
     if not filtered_df.empty:
         fig_map = px.scatter_mapbox(
             filtered_df,
@@ -613,7 +614,7 @@ else:
         if not selected_countries and not selected_cities and not selected_districts:
             # If no specific geography is selected, show the whole world
             fig_map.update_layout(
-                height=600, 
+                height=600,
                 margin={"r":0,"t":0,"l":0,"b":0},
                 mapbox=dict(zoom=1, center=dict(lat=20, lon=0))
             )
@@ -621,26 +622,26 @@ else:
             # Calculate dynamic bounds for auto-zoom when specific places are selected
             lat_min, lat_max = filtered_df['Latitude'].astype(float).min(), filtered_df['Latitude'].astype(float).max()
             lon_min, lon_max = filtered_df['Longitude'].astype(float).min(), filtered_df['Longitude'].astype(float).max()
-            
+
             center_lat = (lat_min + lat_max) / 2
             center_lon = (lon_min + lon_max) / 2
-            
+
             import math
             max_bound = max(lat_max - lat_min, lon_max - lon_min)
             if max_bound == 0:
                 zoom_level = 10
             else:
                 zoom_level = max(1, math.log2(360 / max_bound) - 0.5)
-            
+
             fig_map.update_layout(
-                height=600, 
+                height=600,
                 margin={"r":0,"t":0,"l":0,"b":0},
                 mapbox=dict(
                     center=dict(lat=center_lat, lon=center_lon),
                     zoom=zoom_level
                 )
             )
-            
+
         # Define hierarchical marker sizes for each award level to create a clear visual depth
         sizes = {
             '3 Stars': 7,
@@ -649,7 +650,7 @@ else:
             'Bib Gourmand': 5,
             'Selected Restaurants': 5
         }
-        
+
         # Apply custom sizes and opacities per trace to replicate the reference image's density look
         for trace in fig_map.data:
             award_name = trace.name
@@ -663,15 +664,15 @@ else:
                     trace.marker.opacity = 0.5
                 else: # 2 Stars and 3 Stars
                     trace.marker.opacity = 0.5
-        
+
         # Render map with click events enabled
         event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", selection_mode="points")
-        
+
         # Display selected restaurant links and images
         if event and event.selection.points:
             selected_urls = [point["customdata"][0] for point in event.selection.points]
             selected_df_map = filtered_df[filtered_df["Url"].isin(selected_urls)]
-            
+
             if not selected_df_map.empty:
                 st.markdown("<h2 class='section-title'> Selected Restaurant Details</h2>", unsafe_allow_html=True)
                 for _, row in selected_df_map.iterrows():
@@ -722,7 +723,7 @@ else:
     if not filtered_df.empty:
         # Visualizations Layout
         row1_col1, row1_col2 = st.columns(2)
-        
+
         with row1_col1:
             # 1. จำนวนร้านตามประเทศ (Number of restaurants by country)
             country_counts = filtered_df['Country'].value_counts().reset_index()
@@ -792,7 +793,7 @@ else:
             st.plotly_chart(fig_city, use_container_width=True)
 
         row2_col1, row2_col2 = st.columns(2)
-        
+
         with row2_col1:
             # 3. Star Distribution
             # ---- New Pie Chart: Award Distribution ----
@@ -851,7 +852,7 @@ else:
                 textfont=dict(color='#fafafa', size=14)
             )
             fig_price.update_xaxes(tickangle=-90, visible=True)
-            fig_price.update_yaxes(visible=False)    
+            fig_price.update_yaxes(visible=False)
             st.plotly_chart(fig_price, use_container_width=True)
 
         # 4. Cuisine Distribution
@@ -878,7 +879,7 @@ else:
             yaxis_showgrid=False,
             title=dict(font=dict(color='#fafafa')),
             xaxis=dict(tickfont=dict(color='#fafafa')),
-        
+
         )
         # Show values with commas outside bars (horizontal bars use x values)
         fig_cuisine.update_traces(
@@ -887,7 +888,5 @@ else:
             textfont=dict(color='#fafafa')
         )
         fig_cuisine.update_xaxes(tickangle=-90)
-        fig_cuisine.update_xaxes(visible=False)    
+        fig_cuisine.update_xaxes(visible=False)
         st.plotly_chart(fig_cuisine, use_container_width=True)
-
-       

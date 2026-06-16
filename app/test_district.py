@@ -1,7 +1,12 @@
-import pandas as pd
-from app.data import load_kaggle_data, get_restaurants, get_unique_awards
+import os
+import sys
 
-load_kaggle_data()
+# Add project root to sys.path to allow importing from the 'app' package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from app.data import load_data, get_restaurants, get_unique_awards
+
+load_data()
 df = get_restaurants(awards=get_unique_awards())
 location_split = df['Location'].str.split(', ', n=1, expand=True)
 df['City'] = location_split[0]

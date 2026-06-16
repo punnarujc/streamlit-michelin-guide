@@ -1,4 +1,13 @@
+import os
+import sys
 import streamlit as st
+
+# Add project root to sys.path to allow importing from the 'app' package
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+
 
 # Set global page configuration
 st.set_page_config(
@@ -9,13 +18,12 @@ st.set_page_config(
 )
 
 # Define pages relative to this entrypoint script (app/app.py)
-map_page = st.Page("map.py", title="Michelin Guide Map", default=True)
 michelin_guide_page = st.Page("michelin_guide.py", title="Michelin Guide")
-#
+trip_planner_page = st.Page("trip_planner.py", title="Trip Planner")
 
 
 # Setup navigation structure
-pg = st.navigation([map_page, michelin_guide_page])
+pg = st.navigation([michelin_guide_page, trip_planner_page])
 # Inject premium custom CSS for the sidebar and header
 st.sidebar.markdown("""
 <style>
@@ -143,13 +151,136 @@ header svg, [data-testid="stHeader"] svg, .stAppHeader svg {
 .sidebar-footer div {
     color: #ffffff !important;
 }
+
+/* Sidebar Database Status CSS */
+[data-testid="stSidebar"] > div:first-child {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+/* Make the inner wrapper a flex container to allow pushing items to the bottom */
+[data-testid="stSidebarUserContent"] {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    padding-bottom: 1rem;
+}
+[data-testid="stSidebarUserContent"] > div {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+/* Push the db-divider and everything after it to the bottom */
+.element-container:has(.db-divider) {
+    margin-top: auto !important;
+}
+.db-status-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    width: 100%;
+}
+.db-status-card {
+    background-color: #0c0c0c;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-family: inherit !important;
+}
+.db-status-card:hover {
+    border-color: rgba(212, 175, 55, 0.35) !important;
+    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.1);
+}
+.db-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.db-status-name {
+    font-family: inherit !important;
+    font-size: 13px;
+    color: #ffffff;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+.db-status-badge {
+    font-family: inherit !important;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+}
+.badge-success {
+    background-color: rgba(76, 175, 80, 0.1) !important;
+    color: #4CAF50 !important;
+    border: 1px solid rgba(76, 175, 80, 0.3) !important;
+}
+.badge-failed {
+    background-color: rgba(189, 27, 33, 0.1) !important;
+    color: #FF4F55 !important;
+    border: 1px solid rgba(189, 27, 33, 0.3) !important;
+}
+.badge-idle {
+    background-color: rgba(136, 136, 136, 0.1) !important;
+    color: #888888 !important;
+    border: 1px solid rgba(136, 136, 136, 0.2) !important;
+}
+.db-status-info {
+    font-size: 12px;
+    color: #cccccc;
+    margin-top: 2px;
+    font-family: inherit !important;
+}
+.db-status-error {
+    font-size: 10px;
+    color: #FF8A8F;
+    margin-top: 6px;
+    line-height: 1.3;
+    font-style: italic;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 6px;
+    border-radius: 4px;
+    border-left: 2px solid #BD1B21;
+    max-height: 70px;
+    overflow-y: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# Run the navigation router
-pg.run()
+# Show database warning banner if in mock mode
+if st.session_state.get("using_mock_data", False):
+    st.sidebar.markdown(
+        f"<div style='border: 1px solid rgba(255, 170, 0, 0.3); border-radius: 8px; padding: 12px; background-color: rgba(255, 170, 0, 0.05); margin: 10px 0 20px 0;'>"
+        f"<div style='font-size: 11px; font-weight: 700; color: #FFaa00; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;'>⚠️ Fallback Active</div>"
+        f"<div style='font-size: 11px; color: #cccccc; line-height: 1.4; margin-bottom: 8px;'>Using fallback data. "
+        f"{st.session_state.get('db_error_message', '')}</div>"
+        f"<div style='font-size: 10px; color: #888888; font-style: italic;'>Please configure your database credentials in <code>.env</code> and restart the application.</div>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
 
-# Additional sidebar components rendered after page load
+# Additional sidebar components rendered before page load so they appear immediately
 st.sidebar.markdown("<div class='sidebar-section-title'>About</div>", unsafe_allow_html=True)
 st.sidebar.markdown(
     "This is an interactive 2D map visualizing the **Michelin Guide Restaurants 2021** dataset from Kaggle. "
@@ -164,3 +295,21 @@ st.sidebar.markdown("""
     <div style="font-size: 11px; font-weight: 100;">June 2026</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Database Integration sidebar section
+st.sidebar.markdown("<hr class='db-divider' style='margin: 15px 0;' />", unsafe_allow_html=True)
+st.sidebar.markdown("<div class='sidebar-section-title db-section-title'>Database Integration</div>", unsafe_allow_html=True)
+
+# Create placeholders for real-time status updates
+db_status_container = st.sidebar.empty()
+st.session_state.db_status_container = db_status_container
+
+db_warning_container = st.sidebar.empty()
+st.session_state.db_warning_container = db_warning_container
+
+# Initial render of the database status (reads from st.session_state or defaults to idle)
+from app.data import update_db_status_ui
+update_db_status_ui()
+
+# Run the navigation router
+pg.run()
