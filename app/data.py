@@ -14,6 +14,12 @@ if st.runtime.exists():
     if 'db_error_message' not in st.session_state:
         st.session_state.db_error_message = None
 
+def get_config(key, default=None):
+    """Retrieves configuration from st.secrets first, then environment variables."""
+    if st.runtime.exists() and key in st.secrets:
+        return st.secrets[key]
+    return os.getenv(key, default)
+
 
 
 @st.cache_resource
@@ -70,12 +76,12 @@ def fetch_mysql():
     """Connects to MySQL and queries the restaurants table."""
     import pymysql
 
-    host = os.getenv("MYSQL_HOST")
-    port = int(os.getenv("MYSQL_PORT", 3306))
-    user = os.getenv("MYSQL_USER")
-    password = os.getenv("MYSQL_PASSWORD")
-    database = os.getenv("MYSQL_DATABASE")
-    table = os.getenv("MYSQL_TABLE", "restaurants")
+    host = get_config("MYSQL_HOST")
+    port = int(get_config("MYSQL_PORT", 3306))
+    user = get_config("MYSQL_USER")
+    password = get_config("MYSQL_PASSWORD")
+    database = get_config("MYSQL_DATABASE")
+    table = get_config("MYSQL_TABLE", "restaurants")
 
     if not user or user == "your_mysql_user" or "placeholder" in user:
         raise ValueError("MySQL credentials are not configured or contain placeholder values.")
@@ -101,9 +107,9 @@ def fetch_mongodb():
     """Connects to MongoDB and queries the restaurants collection."""
     from pymongo import MongoClient
 
-    uri = os.getenv("MONGODB_URI")
-    db_name = os.getenv("MONGODB_DATABASE")
-    collection_name = os.getenv("MONGODB_COLLECTION", "restaurants")
+    uri = get_config("MONGODB_URI")
+    db_name = get_config("MONGODB_DATABASE")
+    collection_name = get_config("MONGODB_COLLECTION", "restaurants")
 
     if not uri or "localhost:27017" in uri and not db_name:
         raise ValueError("MongoDB collection/database is not configured.")
@@ -123,20 +129,20 @@ def fetch_snowflake(passcode=None):
     """Connects to Snowflake and queries the restaurants table."""
     import snowflake.connector
 
-    user = os.getenv("SNOWFLAKE_USER")
-    password = os.getenv("SNOWFLAKE_PASSWORD")
-    account = os.getenv("SNOWFLAKE_ACCOUNT")
-    warehouse = os.getenv("SNOWFLAKE_WAREHOUSE")
-    database = os.getenv("SNOWFLAKE_DATABASE")
-    schema = os.getenv("SNOWFLAKE_SCHEMA", "public")
-    table = os.getenv("SNOWFLAKE_TABLE", "restaurants")
+    user = get_config("SNOWFLAKE_USER")
+    password = get_config("SNOWFLAKE_PASSWORD")
+    account = get_config("SNOWFLAKE_ACCOUNT")
+    warehouse = get_config("SNOWFLAKE_WAREHOUSE")
+    database = get_config("SNOWFLAKE_DATABASE")
+    schema = get_config("SNOWFLAKE_SCHEMA", "public")
+    table = get_config("SNOWFLAKE_TABLE", "restaurants")
 
-    role = os.getenv("SNOWFLAKE_ROLE")
+    role = get_config("SNOWFLAKE_ROLE")
 
     if not user or user == "your_snowflake_user" or "placeholder" in user:
         raise ValueError("Snowflake credentials are not configured or contain placeholder values.")
 
-    authenticator = os.getenv("SNOWFLAKE_AUTHENTICATOR")
+    authenticator = get_config("SNOWFLAKE_AUTHENTICATOR")
 
     conn_params = {
         "user": user,
@@ -151,8 +157,8 @@ def fetch_snowflake(passcode=None):
         conn_params["authenticator"] = authenticator
     if passcode:
         conn_params["passcode"] = passcode
-    elif os.getenv("SNOWFLAKE_PASSCODE"):
-        conn_params["passcode"] = os.getenv("SNOWFLAKE_PASSCODE")
+    elif get_config("SNOWFLAKE_PASSCODE"):
+        conn_params["passcode"] = get_config("SNOWFLAKE_PASSCODE")
     if role:
         conn_params["role"] = role
 
@@ -184,7 +190,7 @@ def get_credentials_hash(db_type):
         keys = ["SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD", "SNOWFLAKE_ACCOUNT", "SNOWFLAKE_WAREHOUSE", "SNOWFLAKE_DATABASE", "SNOWFLAKE_SCHEMA", "SNOWFLAKE_TABLE", "SNOWFLAKE_ROLE"]
     else:
         return ""
-    return "|".join([os.getenv(k, "") for k in keys])
+    return "|".join([str(get_config(k, "")) for k in keys])
 
 @st.cache_data(show_spinner=False)
 def fetch_raw_data(db_type, credentials_hash, passcode=None):

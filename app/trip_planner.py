@@ -174,8 +174,8 @@ else:
     st.markdown("<h3 class='section-title'>Plan Your Journey</h3>", unsafe_allow_html=True)
 
     # Check env variables
-    env_api_key = os.getenv("OPENROUTER_API_KEY", "")
-    env_model = os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+    env_api_key = st.secrets.get("OPENROUTER_API_KEY", os.getenv("OPENROUTER_API_KEY", ""))
+    env_model = st.secrets.get("OPENROUTER_MODEL", os.getenv("OPENROUTER_MODEL", "google/gemini-2.5-flash"))
 
     with st.container(border=True):
         col1, col2, col3 = st.columns(3)

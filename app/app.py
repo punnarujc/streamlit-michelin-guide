@@ -275,7 +275,7 @@ if st.session_state.get("using_mock_data", False):
         f"<div style='font-size: 11px; font-weight: 700; color: #FFaa00; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;'>⚠️ Fallback Active</div>"
         f"<div style='font-size: 11px; color: #cccccc; line-height: 1.4; margin-bottom: 8px;'>Using fallback data. "
         f"{st.session_state.get('db_error_message', '')}</div>"
-        f"<div style='font-size: 10px; color: #888888; font-style: italic;'>Please configure your database credentials in <code>.env</code> and restart the application.</div>"
+        f"<div style='font-size: 10px; color: #888888; font-style: italic;'>Please configure your database credentials in <code>.streamlit/secrets.toml</code> and restart the application.</div>"
         f"</div>",
         unsafe_allow_html=True
     )
