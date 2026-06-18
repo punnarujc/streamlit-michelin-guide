@@ -1,7 +1,11 @@
 import os
 import requests
 import streamlit as st
-from app.data import load_data, get_restaurants, get_unique_awards
+from data import load_data, get_restaurants, get_unique_awards
+from theme import apply_theme
+
+# Shared Michelin Guide colour palette (applied first; page CSS below refines it)
+apply_theme()
 
 # Re-apply the luxury dark theme for the page contents
 st.markdown("""

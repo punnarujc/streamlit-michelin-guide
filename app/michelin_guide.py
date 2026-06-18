@@ -3,7 +3,7 @@ import re
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from app.data import load_data, get_restaurants, get_unique_awards
+from data import load_data, get_restaurants, get_unique_awards
 
 # ===== LUXURY THEME ADDITION =====
 st.markdown("""
@@ -567,16 +567,10 @@ else:
     # ------------------
     st.markdown("---")
 
-    col_map_title, col_map_btn = st.columns([8, 2])
-    with col_map_title:
-        st.markdown("<h2 class='section-title'> Michelin Restaurants Map</h2>", unsafe_allow_html=True)
-    with col_map_btn:
-        # A simple button that triggers a rerun, which reapplies the mapbox bounds
-        # to effectively reset the zoom/pan back to auto-fit the data.
-        st.button("Reset Map View (Auto-Fit)")
+    st.markdown("<h2 class='section-title'> Michelin Restaurants Map</h2>", unsafe_allow_html=True)
 
     if not filtered_df.empty:
-        fig_map = px.scatter_mapbox(
+        fig_map = px.scatter_map(
             filtered_df,
             lat="Latitude",
             lon="Longitude",
@@ -584,7 +578,7 @@ else:
             hover_name="Name",
             hover_data={"City": True, "District": True, "Cuisine": True, "Price": True, "Latitude": False, "Longitude": False},
             custom_data=["Url"],
-            mapbox_style="carto-darkmatter",
+            map_style="carto-darkmatter",
             category_orders={
                 "Award": ["Selected Restaurants", "Bib Gourmand", "1 Star", "2 Stars", "3 Stars"]
             },
@@ -616,7 +610,7 @@ else:
             fig_map.update_layout(
                 height=600,
                 margin={"r":0,"t":0,"l":0,"b":0},
-                mapbox=dict(zoom=1, center=dict(lat=20, lon=0))
+                map=dict(zoom=1, center=dict(lat=20, lon=0))
             )
         else:
             # Calculate dynamic bounds for auto-zoom when specific places are selected
@@ -636,7 +630,7 @@ else:
             fig_map.update_layout(
                 height=600,
                 margin={"r":0,"t":0,"l":0,"b":0},
-                mapbox=dict(
+                map=dict(
                     center=dict(lat=center_lat, lon=center_lon),
                     zoom=zoom_level
                 )
@@ -666,7 +660,7 @@ else:
                     trace.marker.opacity = 0.5
 
         # Render map with click events enabled
-        event = st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", selection_mode="points")
+        event = st.plotly_chart(fig_map, width='stretch', on_select="rerun", selection_mode="points")
 
         # Display selected restaurant links and images
         if event and event.selection.points:
@@ -687,7 +681,7 @@ else:
                         with st.spinner("Fetching image..."):
                             img_url = fetch_michelin_image(row['Url'])
                             if img_url:
-                                st.image(img_url, use_container_width=True)
+                                st.image(img_url, width='stretch')
                             else:
                                 st.markdown("*(No image available)*")
 
@@ -707,7 +701,7 @@ else:
     </style>""", unsafe_allow_html=True)
     st.dataframe(
         filtered_df[['Name', 'City', 'District', 'Country', 'Award', 'Cuisine', 'Price', 'Location', 'Url']],
-        use_container_width=True,
+        width='stretch',
         hide_index=True,
         column_config={
             "Url": st.column_config.LinkColumn("Michelin URL")
@@ -757,7 +751,7 @@ else:
             # Rotate x‑axis labels so the first character faces the viewer and the tail points forward
             fig_country.update_xaxes(tickangle=-90, visible=True)
             fig_country.update_yaxes(visible=False)
-            st.plotly_chart(fig_country, use_container_width=True)
+            st.plotly_chart(fig_country, width='stretch')
 
         with row1_col2:
             # 2. Top Cities
@@ -790,7 +784,7 @@ else:
             )
             fig_city.update_xaxes(tickangle=-90, visible=True)
             fig_city.update_yaxes(visible=False)
-            st.plotly_chart(fig_city, use_container_width=True)
+            st.plotly_chart(fig_city, width='stretch')
 
         row2_col1, row2_col2 = st.columns(2)
 
@@ -820,7 +814,7 @@ else:
             )
             # Show percentages and labels on slices with white text
             fig_award.update_traces(textinfo='percent+label', pull=0.02, textfont=dict(color='#ffffff'))
-            st.plotly_chart(fig_award, use_container_width=True)
+            st.plotly_chart(fig_award, width='stretch')
 
         with row2_col2:
             # 5. Price Level Distribution
@@ -853,7 +847,7 @@ else:
             )
             fig_price.update_xaxes(tickangle=-90, visible=True)
             fig_price.update_yaxes(visible=False)
-            st.plotly_chart(fig_price, use_container_width=True)
+            st.plotly_chart(fig_price, width='stretch')
 
         # 4. Cuisine Distribution
         #st.markdown("#### Top 20 Cuisines")
@@ -889,4 +883,4 @@ else:
         )
         fig_cuisine.update_xaxes(tickangle=-90)
         fig_cuisine.update_xaxes(visible=False)
-        st.plotly_chart(fig_cuisine, use_container_width=True)
+        st.plotly_chart(fig_cuisine, width='stretch')

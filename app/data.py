@@ -2,6 +2,7 @@ import os
 import duckdb
 import pandas as pd
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -16,8 +17,12 @@ if st.runtime.exists():
 
 def get_config(key, default=None):
     """Retrieves configuration from st.secrets first, then environment variables."""
-    if st.runtime.exists() and key in st.secrets:
-        return st.secrets[key]
+    if st.runtime.exists():
+        try:
+            if key in st.secrets:
+                return st.secrets[key]
+        except StreamlitSecretNotFoundError:
+            pass
     return os.getenv(key, default)
 
 
@@ -500,3 +505,4 @@ def update_db_status_ui():
                         st.session_state.snowflake_passcode = totp_input
                         st.session_state.data_loaded = False
                         st.rerun()
+

@@ -20,10 +20,11 @@ st.set_page_config(
 # Define pages relative to this entrypoint script (app/app.py)
 michelin_guide_page = st.Page("michelin_guide.py", title="Michelin Guide")
 trip_planner_page = st.Page("trip_planner.py", title="Trip Planner")
+ai_assistant_page = st.Page("ai_assistant.py", title="AI Assistant")
 
 
 # Setup navigation structure
-pg = st.navigation([michelin_guide_page, trip_planner_page])
+pg = st.navigation([michelin_guide_page, trip_planner_page, ai_assistant_page])
 # Inject premium custom CSS for the sidebar and header
 st.sidebar.markdown("""
 <style>
@@ -307,8 +308,15 @@ st.session_state.db_status_container = db_status_container
 db_warning_container = st.sidebar.empty()
 st.session_state.db_warning_container = db_warning_container
 
-# Initial render of the database status (reads from st.session_state or defaults to idle)
-from app.data import update_db_status_ui
+# Initial render of the database status (reads from st.session_state or defaults to idle).
+# On a cold start, Streamlit's first script run can race the import machinery and leave the
+# `data` module partially initialized, so retry the import once before giving up.
+try:
+    from data import update_db_status_ui
+except ImportError:
+    # Drop any partially-initialized module left by the race, then re-import cleanly.
+    sys.modules.pop("data", None)
+    from data import update_db_status_ui
 update_db_status_ui()
 
 # Run the navigation router
