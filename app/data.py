@@ -288,9 +288,12 @@ def load_data(snowflake_passcode=None):
                 st.session_state.db_statuses = db_statuses
                 update_db_status_ui()
 
-    # Merge successful dataframes
+    # Check if any database connection failed
+    any_db_failed = any(db_statuses[db_key]['status'] == 'failed' for db_key in ['mysql', 'mongodb', 'snowflake'])
+
+    # Merge successful dataframes only if all databases succeeded
     df = None
-    if successful_dfs:
+    if not any_db_failed and successful_dfs:
         try:
             # Select column groups for each database
             mysql_cols = ['Url', 'Name', 'Address', 'Location', 'Price', 'Cuisine', 'Longitude', 'Latitude', 'Award']
@@ -354,7 +357,7 @@ def load_data(snowflake_passcode=None):
         except Exception as merge_err:
             db_statuses['merge_error'] = str(merge_err)
 
-    # Fallback if no databases succeeded
+    # Fallback if no databases succeeded or any database failed
     if df is None or df.empty:
         # Update kagglehub to loading status
         db_statuses['kagglehub'] = {'status': 'loading', 'rows': 0, 'error': None}
@@ -370,7 +373,7 @@ def load_data(snowflake_passcode=None):
             if in_streamlit:
                 st.session_state.using_mock_data = True
                 failed_dbs = [name for name, info in db_statuses.items() if info['status'] == 'failed' and name != 'kagglehub']
-                st.session_state.db_error_message = f"Failed to connect to all databases ({', '.join(failed_dbs)}). Loaded fallback Kagglehub data."
+                st.session_state.db_error_message = f"Database connection error or failure ({', '.join(failed_dbs)}). Loaded fallback Kagglehub data."
         except Exception as kh_err:
             db_statuses['kagglehub'] = {'status': 'failed', 'rows': 0, 'error': str(kh_err)}
             if in_streamlit:
@@ -505,4 +508,3 @@ def update_db_status_ui():
                         st.session_state.snowflake_passcode = totp_input
                         st.session_state.data_loaded = False
                         st.rerun()
-

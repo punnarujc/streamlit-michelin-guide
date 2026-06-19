@@ -15,7 +15,7 @@ This repository contains a premium, interactive Streamlit-based web application 
   - **MySQL** (using `pymysql`)
   - **MongoDB** (using `pymongo`)
   - **Snowflake** (using `snowflake-connector-python`)
-- **Fallback Source:** Kagglehub (automatically downloads the `ngshiheng/michelin-guide-restaurants-2021` CSV dataset if all active database connections fail)
+- **Fallback Source:** Kagglehub (automatically downloads the `ngshiheng/michelin-guide-restaurants-2021` CSV dataset if any active database connection fails or config error occurs)
 - **Visualization:** Plotly Express (Mapbox WebGL scatter projection for mapping; bar and pie charts for distribution analytics)
 - **Environment & Dependency Management:** Python `uv`
 
@@ -23,7 +23,7 @@ This repository contains a premium, interactive Streamlit-based web application 
 
 1.  **Separation of Concerns:** Keep raw database extraction and processing logic (managed by scripts in `scripts/` and helper database-fetching methods in `app/data.py`) separate from client-side UI rendering (`app/michelin_guide.py`).
 2.  **Performance & Caching:** Heavy utilization of `@st.cache_data` and `@st.cache_resource` for connection pooling, raw database loading (based on credential hash), SQL queries, and scraping to prevent redundant round-trips and I/O.
-3.  **Resilience & Graceful Degradation:** The application attempts to connect to all configured database backends, fetching specific column slices from each database (MySQL, MongoDB, Snowflake) and merging them column-wise via an outer-join on `Url`. If any individual backend fails, its columns are recovered from another successfully loaded database, and its connection error is displayed in the sidebar status panel. If all database connections fail, it falls back to the Kagglehub dataset.
+3.  **Resilience & Graceful Degradation:** The application attempts to connect to all configured database backends, fetching specific column slices from each database (MySQL, MongoDB, Snowflake) and merging them column-wise via an outer-join on `Url`. If any individual database backend fails or encounters an error, the application immediately falls back to loading the Kagglehub dataset to ensure service continuity, while displaying connection errors in the sidebar status panel.
 4.  **Premium Aesthetics:** A unified, dark luxury-themed design utilizing custom CSS. Text features gold/red/white palettes, styled select chips, custom metric summaries, styled datatables, and a dedicated database connection status dashboard panel in the sidebar.
 
 ## Codebase Structure
